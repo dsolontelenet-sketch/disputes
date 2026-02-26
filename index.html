@@ -4,15 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Disputes File Generator</title>
-<link rel="icon" type="image/svg+xml" 
-href="data:image/svg+xml,
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
-  <rect width='64' height='64' rx='12' fill='%230d0f14'/>
-  <circle cx='22' cy='32' r='14' fill='%23ff3b30'/>
-  <circle cx='42' cy='32' r='14' fill='%2300e676'/>
-  <path d='M22 24v16M14 32h16' stroke='white' stroke-width='3'/>
-  <path d='M36 32l4 4 8-8' stroke='white' stroke-width='3' fill='none'/>
-</svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230d0f14'/><circle cx='22' cy='32' r='14' fill='%23ff3b30'/><circle cx='42' cy='32' r='14' fill='%2300e676'/><path d='M22 24v16M14 32h16' stroke='white' stroke-width='3'/><path d='M36 32l4 4 8-8' stroke='white' stroke-width='3' fill='none'/></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
@@ -22,10 +14,10 @@ href="data:image/svg+xml,
     --panel: #13161e;
     --border: #1f2535;
     --accent: #00d4ff;
-    --accent2: #ff6b35;
     --text: #e2e8f0;
     --muted: #6b7a99;
     --success: #00e5a0;
+    --danger: #ff4d4d;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,35 +28,21 @@ href="data:image/svg+xml,
     font-family: 'IBM Plex Sans', sans-serif;
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 2rem;
   }
 
-  .container {
-    width: 100%;
-    max-width: 620px;
-  }
+  .container { width: 100%; max-width: 660px; }
 
-  .header {
-    margin-bottom: 2.5rem;
-  }
-
+  .header { margin-bottom: 2rem; }
   .header h1 {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--accent);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 0.4rem;
+    font-size: 1.1rem; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 0.4rem;
   }
-
-  .header p {
-    font-size: 0.85rem;
-    color: var(--muted);
-    font-weight: 300;
-  }
+  .header p { font-size: 0.85rem; color: var(--muted); font-weight: 300; }
 
   .card {
     background: var(--panel);
@@ -73,123 +51,142 @@ href="data:image/svg+xml,
     padding: 2rem;
   }
 
-  .field {
-    margin-bottom: 1.5rem;
-  }
+  .field { margin-bottom: 1.5rem; }
 
   label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.5rem;
+    display: block; font-size: 0.75rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.5rem;
     font-family: 'IBM Plex Mono', monospace;
   }
 
   select, input[type="text"] {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    color: var(--text);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.9rem;
-    outline: none;
-    transition: border-color 0.2s;
-    appearance: none;
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.75rem 1rem; color: var(--text);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem;
+    outline: none; transition: border-color 0.2s; appearance: none;
   }
-
-  select:focus, input[type="text"]:focus {
-    border-color: var(--accent);
-  }
-
+  select:focus, input[type="text"]:focus { border-color: var(--accent); }
   select option { background: #1a1d28; }
 
-  .priority-group {
-    display: none;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-top: 0.5rem;
-  }
-
+  .priority-group { display: none; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
   .priority-group.visible { display: flex; }
 
   .priority-btn {
-    flex: 1;
-    min-width: 80px;
-    padding: 0.6rem;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    text-align: center;
+    flex: 1; min-width: 80px; padding: 0.6rem;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem;
+    cursor: pointer; transition: all 0.15s; text-align: center;
   }
-
   .priority-btn:hover { border-color: var(--accent); color: var(--accent); }
   .priority-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
 
+  /* ── URL SECTION ── */
+  .url-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+  .url-header label { margin-bottom: 0; }
+
+  .url-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; color: var(--accent);
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 20px; padding: 0.15rem 0.65rem;
+  }
+
+  .mode-toggle { display: flex; gap: 0.4rem; margin-bottom: 1rem; }
+  .mode-btn {
+    padding: 0.4rem 0.9rem;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.74rem;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+
+  /* One-by-one rows */
+  .url-rows { display: flex; flex-direction: column; gap: 0.45rem; }
+
+  .url-row { display: flex; align-items: center; gap: 0.5rem; }
+
+  .url-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem; color: var(--muted);
+    min-width: 18px; text-align: right; flex-shrink: 0;
+  }
+
+  .url-row input {
+    flex: 1; padding: 0.55rem 0.85rem; font-size: 0.82rem;
+  }
+
+  .url-del {
+    width: 28px; height: 28px; flex-shrink: 0;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted);
+    cursor: pointer; font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .url-del:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,77,77,0.08); }
+
+  .url-add {
+    margin-top: 0.5rem; padding: 0.5rem;
+    background: transparent; border: 1px dashed var(--border);
+    border-radius: 8px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem;
+    cursor: pointer; width: 100%; transition: all 0.15s; text-align: center;
+  }
+  .url-add:hover { border-color: var(--accent); color: var(--accent); border-style: solid; }
+
+  /* Bulk textarea */
+  #bulk-ta {
+    width: 100%; min-height: 130px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.75rem 1rem;
+    color: var(--text); font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem; outline: none; resize: vertical;
+    transition: border-color 0.2s; line-height: 1.7;
+  }
+  #bulk-ta:focus { border-color: var(--accent); }
+  #bulk-ta::placeholder { color: var(--muted); }
+
+  /* Preview */
   .preview-box {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-top: 1.5rem;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1rem; margin-top: 1.5rem;
   }
-
-  .preview-box .label {
-    font-size: 0.7rem;
-    font-family: 'IBM Plex Mono', monospace;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 0.4rem;
+  .preview-box .lbl {
+    font-size: 0.7rem; font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.1em; margin-bottom: 0.4rem;
   }
-
-  .preview-filename {
+  .preview-fn {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.85rem;
-    color: var(--success);
-    word-break: break-all;
+    font-size: 0.85rem; color: var(--success); word-break: break-all;
+  }
+  .preview-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem; color: var(--muted); margin-top: 0.4rem;
   }
 
   .btn-generate {
-    width: 100%;
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background: var(--accent);
-    border: none;
-    border-radius: 8px;
-    color: #0d0f14;
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: 600;
-    font-size: 0.9rem;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: all 0.2s;
+    width: 100%; margin-top: 1.5rem; padding: 1rem;
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #0d0f14; font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600; font-size: 0.9rem; letter-spacing: 0.05em;
+    cursor: pointer; transition: all 0.2s;
   }
-
   .btn-generate:hover { background: #33dcff; transform: translateY(-1px); }
   .btn-generate:active { transform: translateY(0); }
   .btn-generate:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
 
-  .hint {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-top: 0.3rem;
-  }
-
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 1.5rem 0;
-  }
+  .hint { font-size: 0.74rem; color: var(--muted); margin-top: 0.3rem; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 </style>
 </head>
 <body>
@@ -200,6 +197,7 @@ href="data:image/svg+xml,
   </div>
 
   <div class="card">
+
     <!-- Vendor -->
     <div class="field">
       <label>Vendor</label>
@@ -216,10 +214,10 @@ href="data:image/svg+xml,
       </select>
     </div>
 
-    <!-- Priority (Microsoft / OS only) -->
+    <!-- Priority -->
     <div class="field" id="priorityField" style="display:none;">
       <label>Priority</label>
-      <div class="priority-group visible" id="priorityGroup">
+      <div class="priority-group visible">
         <button class="priority-btn active" data-p="1" onclick="selectPriority(this)">Priority 1</button>
         <button class="priority-btn" data-p="2" onclick="selectPriority(this)">Priority 2</button>
         <button class="priority-btn" data-p="3" id="p3btn" onclick="selectPriority(this)">Priority 3</button>
@@ -232,20 +230,41 @@ href="data:image/svg+xml,
     <div class="field">
       <label>Accepted Timestamp</label>
       <input type="text" id="accepted" placeholder="e.g. 20260226T070001" oninput="updatePreview()" />
-      <p class="hint">Format: YYYYMMDDTHHMMSS — used in filename &amp; sheet data</p>
+      <p class="hint">Format: YYYYMMDDTHHMMSS</p>
     </div>
 
-    <!-- URL -->
+    <!-- URLs -->
     <div class="field">
-      <label>URL</label>
-      <input type="text" id="urlInput" placeholder="e.g. google.com" oninput="updatePreview()" />
-      <p class="hint">Will be placed in cell A1 of the Excel file</p>
+      <div class="url-header">
+        <label>URLs</label>
+        <span class="url-badge" id="url-badge">0 URLs</span>
+      </div>
+
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btn-single" onclick="setMode('single')">➕ One by One</button>
+        <button class="mode-btn" id="btn-bulk" onclick="setMode('bulk')">📋 Paste Bulk</button>
+      </div>
+
+      <!-- Single mode -->
+      <div id="single-mode">
+        <div class="url-rows" id="url-rows"></div>
+        <button class="url-add" onclick="addRow()">＋ Add another URL</button>
+      </div>
+
+      <!-- Bulk mode -->
+      <div id="bulk-mode" style="display:none;">
+        <textarea id="bulk-ta"
+          placeholder="Paste URLs here — one per line:&#10;&#10;google.com&#10;facebook.com&#10;example.org&#10;malicious-site.net&#10;..."
+          oninput="updatePreview()"></textarea>
+        <p class="hint" style="margin-top:0.4rem;">One URL per line • Empty lines are ignored</p>
+      </div>
     </div>
 
     <!-- Preview -->
     <div class="preview-box">
-      <div class="label">Filename Preview</div>
-      <div class="preview-filename" id="filenamePreview">—</div>
+      <div class="lbl">Filename Preview</div>
+      <div class="preview-fn" id="preview-fn">—</div>
+      <div class="preview-sub" id="preview-sub"></div>
     </div>
 
     <button class="btn-generate" id="genBtn" onclick="generate()" disabled>Generate &amp; Download</button>
@@ -254,16 +273,17 @@ href="data:image/svg+xml,
 
 <script>
 let selectedPriority = 1;
+let mode = 'single';
 
+// Init with one row
+window.addEventListener('DOMContentLoaded', () => addRow());
+
+// ── VENDOR ──
 function onVendorChange() {
   const v = document.getElementById('vendor').value;
-  const showPriority = ['microsoft', 'os'].includes(v);
-  document.getElementById('priorityField').style.display = showPriority ? 'block' : 'none';
-  // OS only has Priority 2, Microsoft has 1/2/3
-  const p3 = document.getElementById('p3btn');
-  if (p3) p3.style.display = v === 'microsoft' ? '' : 'none';
+  document.getElementById('priorityField').style.display = ['microsoft','os'].includes(v) ? 'block' : 'none';
+  document.getElementById('p3btn').style.display = v === 'microsoft' ? '' : 'none';
   if (v === 'os') {
-    // auto-select priority 2
     document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('[data-p="2"]').classList.add('active');
     selectedPriority = 2;
@@ -278,11 +298,76 @@ function selectPriority(btn) {
   updatePreview();
 }
 
+// ── MODE ──
+function setMode(m) {
+  mode = m;
+  document.getElementById('single-mode').style.display = m === 'single' ? 'block' : 'none';
+  document.getElementById('bulk-mode').style.display   = m === 'bulk'   ? 'block' : 'none';
+  document.getElementById('btn-single').classList.toggle('active', m === 'single');
+  document.getElementById('btn-bulk').classList.toggle('active', m === 'bulk');
+  updatePreview();
+}
+
+// ── URL ROWS ──
+function addRow() {
+  const wrap = document.getElementById('url-rows');
+  const idx  = wrap.children.length + 1;
+  const row  = document.createElement('div');
+  row.className = 'url-row';
+  row.innerHTML = `
+    <span class="url-num">${idx}</span>
+    <input type="text" placeholder="e.g. google.com" oninput="updatePreview()" />
+    <button class="url-del" onclick="delRow(this)" title="Remove">✕</button>
+  `;
+  wrap.appendChild(row);
+  reindex();
+  updatePreview();
+  row.querySelector('input').focus();
+}
+
+function delRow(btn) {
+  const wrap = document.getElementById('url-rows');
+  const row  = btn.closest('.url-row');
+  if (wrap.children.length <= 1) {
+    row.querySelector('input').value = '';
+    updatePreview();
+    return;
+  }
+  row.remove();
+  reindex();
+  updatePreview();
+}
+
+function reindex() {
+  document.querySelectorAll('#url-rows .url-row').forEach((r, i) => {
+    r.querySelector('.url-num').textContent = i + 1;
+  });
+}
+
+// ── CLEAN URL ──
+function cleanUrl(url) {
+  return url
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/:(\d+)(\/.*)?$/, '$2')  // remove :80 :443 etc
+    .trim();
+}
+
+// ── GET URLS ──
+function getUrls() {
+  if (mode === 'bulk') {
+    return document.getElementById('bulk-ta').value
+      .split('\n').map(l => cleanUrl(l)).filter(l => l);
+  }
+  return Array.from(document.querySelectorAll('#url-rows input'))
+    .map(i => cleanUrl(i.value)).filter(v => v);
+}
+
+// ── FILENAME ──
 function getFilename() {
-  const v = document.getElementById('vendor').value;
+  const v   = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
   if (!v || !acc) return null;
-
   if (v === 'barracuda')  return `Disputes Priority 1 Barracuda accepted at ${acc}`;
   if (v === 'zo')         return `Disputes Priority 1 ZO accepted at ${acc}`;
   if (v === 'az')         return `Disputes Priority 1 AZ accepted at ${acc}`;
@@ -291,43 +376,55 @@ function getFilename() {
   if (v === 'is')         return `Disputes Priority 1 IS accepted at ${acc}`;
   if (v === 'tw')         return `Disputes Priority 1 TW accepted at ${acc}`;
   if (v === 'microsoft') {
-    if (selectedPriority === 1) return `Disputes Priority 1 Microsoft ${acc}`;
-    return `Disputes Priority ${selectedPriority} Microsoft accepted at ${acc}`;
+    return selectedPriority === 1
+      ? `Disputes Priority 1 Microsoft ${acc}`
+      : `Disputes Priority ${selectedPriority} Microsoft accepted at ${acc}`;
   }
   return null;
 }
 
+// ── PREVIEW ──
 function updatePreview() {
-  const fn = getFilename();
-  const url = document.getElementById('urlInput').value.trim();
-  const btn = document.getElementById('genBtn');
-  const prev = document.getElementById('filenamePreview');
+  const fn   = getFilename();
+  const urls = getUrls();
+  document.getElementById('url-badge').textContent = urls.length + (urls.length === 1 ? ' URL' : ' URLs');
+  const previewFn  = document.getElementById('preview-fn');
+  const previewSub = document.getElementById('preview-sub');
+  const btn        = document.getElementById('genBtn');
 
   if (fn) {
-    prev.textContent = fn + '.xlsx';
-    btn.disabled = !url;
+    previewFn.textContent  = fn + '.xlsx';
+    previewSub.textContent = urls.length > 0
+      ? `✓ ${urls.length} row${urls.length > 1 ? 's' : ''} will be written to the Excel file`
+      : 'No URLs entered yet';
+    btn.disabled = urls.length === 0;
   } else {
-    prev.textContent = '—';
+    previewFn.textContent  = '—';
+    previewSub.textContent = '';
     btn.disabled = true;
   }
 }
 
+// ── GENERATE ──
 function generate() {
-  const fn = getFilename();
-  const url = document.getElementById('urlInput').value.trim();
-  if (!fn || !url) return;
+  const fn   = getFilename();
+  const urls = getUrls();
+  if (!fn || !urls.length) return;
 
-  // Template row data from the original file (preserved columns B, D, E, F)
-  // A1 = URL input, B1 = 20016, D1 = 99999, E1 = Immutable, F1 = categories
   const wb = XLSX.utils.book_new();
-  const wsData = [
-    [url, 20016, null, 99999, 'Immutable', 'UCReviewed,CLReviewed,CLRetain,HTTPError,IWCC,InTheClear,Uncategorized,UnknownHost,Undeliverable,Deleted,StDnsError,NRD,DLCSkip']
-  ];
+
+  // A=URL, B=empty, C=empty, D=99999, E=Immutable, F=categories
+  const wsData = urls.map(url => [
+    url,
+    null,
+    null,
+    99999,
+    'Immutable',
+    'UCReviewed,CLReviewed,CLRetain,HTTPError,IWCC,InTheClear,Uncategorized,UnknownHost,Undeliverable,Deleted,StDnsError,NRD,DLCSkip'
+  ]);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // Match original column width for A (34 chars wide)
-  ws['!cols'] = [{ wch: 34 }, { wch: 10 }, {}, { wch: 10 }, { wch: 12 }, { wch: 80 }];
+  ws['!cols'] = [{ wch: 34 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 80 }];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, fn + '.xlsx');
