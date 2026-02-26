@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disputes File Generator</title>
+<link rel="icon" type="image/svg+xml" 
+href="data:image/svg+xml,
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+  <rect width='64' height='64' rx='12' fill='%230d0f14'/>
+  <circle cx='22' cy='32' r='14' fill='%23ff3b30'/>
+  <circle cx='42' cy='32' r='14' fill='%2300e676'/>
+  <path d='M22 24v16M14 32h16' stroke='white' stroke-width='3'/>
+  <path d='M36 32l4 4 8-8' stroke='white' stroke-width='3' fill='none'/>
+</svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --panel: #13161e;
+    --border: #1f2535;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --text: #e2e8f0;
+    --muted: #6b7a99;
+    --success: #00e5a0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 620px;
+  }
+
+  .header {
+    margin-bottom: 2.5rem;
+  }
+
+  .header h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .header p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+  }
+
+  .field {
+    margin-bottom: 1.5rem;
+  }
+
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  select, input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+
+  select:focus, input[type="text"]:focus {
+    border-color: var(--accent);
+  }
+
+  select option { background: #1a1d28; }
+
+  .priority-group {
+    display: none;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+
+  .priority-group.visible { display: flex; }
+
+  .priority-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .priority-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .priority-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+
+  .preview-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .preview-box .label {
+    font-size: 0.7rem;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.4rem;
+  }
+
+  .preview-filename {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--success);
+    word-break: break-all;
+  }
+
+  .btn-generate {
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #0d0f14;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-generate:hover { background: #33dcff; transform: translateY(-1px); }
+  .btn-generate:active { transform: translateY(0); }
+  .btn-generate:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+
+  .hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.3rem;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Disputes File Generator</h1>
+    <p>Generate formatted Excel dispute files with correct filenames</p>
+  </div>
+
+  <div class="card">
+    <!-- Vendor -->
+    <div class="field">
+      <label>Vendor</label>
+      <select id="vendor" onchange="onVendorChange()">
+        <option value="">— Select vendor —</option>
+        <option value="barracuda">Barracuda</option>
+        <option value="zo">ZO</option>
+        <option value="az">AZ</option>
+        <option value="checkpoint">Checkpoint</option>
+        <option value="microsoft">Microsoft</option>
+        <option value="os">OS</option>
+        <option value="is">IS</option>
+        <option value="tw">TW</option>
+      </select>
+    </div>
+
+    <!-- Priority (Microsoft / OS only) -->
+    <div class="field" id="priorityField" style="display:none;">
+      <label>Priority</label>
+      <div class="priority-group visible" id="priorityGroup">
+        <button class="priority-btn active" data-p="1" onclick="selectPriority(this)">Priority 1</button>
+        <button class="priority-btn" data-p="2" onclick="selectPriority(this)">Priority 2</button>
+        <button class="priority-btn" data-p="3" id="p3btn" onclick="selectPriority(this)">Priority 3</button>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Accepted -->
+    <div class="field">
+      <label>Accepted Timestamp</label>
+      <input type="text" id="accepted" placeholder="e.g. 20260226T070001" oninput="updatePreview()" />
+      <p class="hint">Format: YYYYMMDDTHHMMSS — used in filename &amp; sheet data</p>
+    </div>
+
+    <!-- URL -->
+    <div class="field">
+      <label>URL</label>
+      <input type="text" id="urlInput" placeholder="e.g. google.com" oninput="updatePreview()" />
+      <p class="hint">Will be placed in cell A1 of the Excel file</p>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview-box">
+      <div class="label">Filename Preview</div>
+      <div class="preview-filename" id="filenamePreview">—</div>
+    </div>
+
+    <button class="btn-generate" id="genBtn" onclick="generate()" disabled>Generate &amp; Download</button>
+  </div>
+</div>
+
+<script>
+let selectedPriority = 1;
+
+function onVendorChange() {
+  const v = document.getElementById('vendor').value;
+  const showPriority = ['microsoft', 'os'].includes(v);
+  document.getElementById('priorityField').style.display = showPriority ? 'block' : 'none';
+  // OS only has Priority 2, Microsoft has 1/2/3
+  const p3 = document.getElementById('p3btn');
+  if (p3) p3.style.display = v === 'microsoft' ? '' : 'none';
+  if (v === 'os') {
+    // auto-select priority 2
+    document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-p="2"]').classList.add('active');
+    selectedPriority = 2;
+  }
+  updatePreview();
+}
+
+function selectPriority(btn) {
+  document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedPriority = parseInt(btn.dataset.p);
+  updatePreview();
+}
+
+function getFilename() {
+  const v = document.getElementById('vendor').value;
+  const acc = document.getElementById('accepted').value.trim();
+  if (!v || !acc) return null;
+
+  if (v === 'barracuda')  return `Disputes Priority 1 Barracuda accepted at ${acc}`;
+  if (v === 'zo')         return `Disputes Priority 1 ZO accepted at ${acc}`;
+  if (v === 'az')         return `Disputes Priority 1 AZ accepted at ${acc}`;
+  if (v === 'checkpoint') return `Disputes Priority 1 Checkpoint ${acc} Diovic`;
+  if (v === 'os')         return `Disputes Priority 2 OS accepted at ${acc}`;
+  if (v === 'is')         return `Disputes Priority 1 IS accepted at ${acc}`;
+  if (v === 'tw')         return `Disputes Priority 1 TW accepted at ${acc}`;
+  if (v === 'microsoft') {
+    if (selectedPriority === 1) return `Disputes Priority 1 Microsoft ${acc}`;
+    return `Disputes Priority ${selectedPriority} Microsoft accepted at ${acc}`;
+  }
+  return null;
+}
+
+function updatePreview() {
+  const fn = getFilename();
+  const url = document.getElementById('urlInput').value.trim();
+  const btn = document.getElementById('genBtn');
+  const prev = document.getElementById('filenamePreview');
+
+  if (fn) {
+    prev.textContent = fn + '.xlsx';
+    btn.disabled = !url;
+  } else {
+    prev.textContent = '—';
+    btn.disabled = true;
+  }
+}
+
+function generate() {
+  const fn = getFilename();
+  const url = document.getElementById('urlInput').value.trim();
+  if (!fn || !url) return;
+
+  // Template row data from the original file (preserved columns B, D, E, F)
+  // A1 = URL input, B1 = 20016, D1 = 99999, E1 = Immutable, F1 = categories
+  const wb = XLSX.utils.book_new();
+  const wsData = [
+    [url, 20016, null, 99999, 'Immutable', 'UCReviewed,CLReviewed,CLRetain,HTTPError,IWCC,InTheClear,Uncategorized,UnknownHost,Undeliverable,Deleted,StDnsError,NRD,DLCSkip']
+  ];
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Match original column width for A (34 chars wide)
+  ws['!cols'] = [{ wch: 34 }, { wch: 10 }, {}, { wch: 10 }, { wch: 12 }, { wch: 80 }];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, fn + '.xlsx');
+}
+</script>
+</body>
+</html>
