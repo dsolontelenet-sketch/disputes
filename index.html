@@ -18,6 +18,9 @@
     --muted: #6b7a99;
     --success: #00e5a0;
     --danger: #ff4d4d;
+    --wiki-bg: #0e1520;
+    --wiki-border: #1a2a3a;
+    --wiki-accent: #4db8ff;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -109,21 +112,14 @@
   .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
   .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
 
-  /* One-by-one rows */
   .url-rows { display: flex; flex-direction: column; gap: 0.45rem; }
-
   .url-row { display: flex; align-items: center; gap: 0.5rem; }
-
   .url-num {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem; color: var(--muted);
     min-width: 18px; text-align: right; flex-shrink: 0;
   }
-
-  .url-row input {
-    flex: 1; padding: 0.55rem 0.85rem; font-size: 0.82rem;
-  }
-
+  .url-row input { flex: 1; padding: 0.55rem 0.85rem; font-size: 0.82rem; }
   .url-del {
     width: 28px; height: 28px; flex-shrink: 0;
     background: transparent; border: 1px solid var(--border);
@@ -143,7 +139,6 @@
   }
   .url-add:hover { border-color: var(--accent); color: var(--accent); border-style: solid; }
 
-  /* Bulk textarea */
   #bulk-ta {
     width: 100%; min-height: 130px;
     background: var(--bg); border: 1px solid var(--border);
@@ -155,7 +150,6 @@
   #bulk-ta:focus { border-color: var(--accent); }
   #bulk-ta::placeholder { color: var(--muted); }
 
-  /* Preview */
   .preview-box {
     background: var(--bg); border: 1px solid var(--border);
     border-radius: 8px; padding: 1rem; margin-top: 1.5rem;
@@ -187,6 +181,71 @@
 
   .hint { font-size: 0.74rem; color: var(--muted); margin-top: 0.3rem; }
   .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+  /* ── WIKI MESSAGE SECTION ── */
+  .wiki-section {
+    margin-top: 1.5rem;
+    border: 1px solid var(--wiki-border);
+    border-radius: 10px;
+    overflow: hidden;
+    display: none;
+  }
+  .wiki-section.visible { display: block; }
+
+  .wiki-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(77,184,255,0.06);
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--wiki-border);
+  }
+  .wiki-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem; font-weight: 600;
+    color: var(--wiki-accent); text-transform: uppercase;
+    letter-spacing: 0.1em; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .wiki-badge {
+    font-size: 0.65rem;
+    background: rgba(77,184,255,0.15);
+    border: 1px solid rgba(77,184,255,0.3);
+    border-radius: 20px; padding: 0.1rem 0.5rem;
+    color: var(--wiki-accent);
+  }
+
+  .copy-btn {
+    background: transparent;
+    border: 1px solid var(--wiki-border);
+    border-radius: 6px;
+    padding: 0.3rem 0.75rem;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 0.35rem;
+  }
+  .copy-btn:hover { border-color: var(--wiki-accent); color: var(--wiki-accent); }
+  .copy-btn.copied { border-color: var(--success); color: var(--success); }
+
+  .wiki-body {
+    background: var(--wiki-bg);
+    padding: 1.1rem 1.25rem;
+  }
+
+  .wiki-message {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.85;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .wiki-message .hl-ts   { color: #ffd166; }
+  .wiki-message .hl-num  { color: var(--success); }
+  .wiki-message .hl-key  { color: var(--wiki-accent); }
+  .wiki-message .hl-jp   { color: #c084fc; }
+  .wiki-message .hl-none { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -268,6 +327,24 @@
     </div>
 
     <button class="btn-generate" id="genBtn" onclick="generate()" disabled>Generate &amp; Download</button>
+
+    <!-- ── WIKI MESSAGE (Checkpoint only) ── -->
+    <div class="wiki-section" id="wiki-section">
+      <div class="wiki-header">
+        <div class="wiki-title">
+          📋 Wiki Message
+          <span class="wiki-badge">Checkpoint only</span>
+        </div>
+        <button class="copy-btn" id="copy-btn" onclick="copyWiki()">
+          <span id="copy-icon">⎘</span>
+          <span id="copy-label">Copy</span>
+        </button>
+      </div>
+      <div class="wiki-body">
+        <div class="wiki-message" id="wiki-message">—</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -275,7 +352,6 @@
 let selectedPriority = 1;
 let mode = 'single';
 
-// Init with one row
 window.addEventListener('DOMContentLoaded', () => addRow());
 
 // ── VENDOR ──
@@ -344,16 +420,15 @@ function reindex() {
   });
 }
 
-// ── CLEAN URL ──
+// ── HELPERS ──
 function cleanUrl(url) {
   return url
     .trim()
     .replace(/^https?:\/\//i, '')
-    .replace(/:(\d+)(\/.*)?$/, '$2')  // remove :80 :443 etc
+    .replace(/:(\d+)(\/.*)?$/, '$2')
     .trim();
 }
 
-// ── GET URLS ──
 function getUrls() {
   if (mode === 'bulk') {
     return document.getElementById('bulk-ta').value
@@ -361,6 +436,10 @@ function getUrls() {
   }
   return Array.from(document.querySelectorAll('#url-rows input'))
     .map(i => cleanUrl(i.value)).filter(v => v);
+}
+
+function pad(n) {
+  return String(n).padStart(2, '0');
 }
 
 // ── FILENAME ──
@@ -383,14 +462,44 @@ function getFilename() {
   return null;
 }
 
+// ── WIKI MESSAGE ──
+function buildWikiText(acc, count) {
+  const c = pad(count);
+  const fraction = `${c}/${c}`;
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} URL). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} URL \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」None \n「Security category」None`;
+}
+
+function renderWiki(acc, count) {
+  const c = pad(count);
+  const fraction = `${c}/${c}`;
+  const el = document.getElementById('wiki-message');
+
+  el.innerHTML =
+    `Hi Chisato-san,\n\n` +
+    `Done uploading/updating on GD the data from disputes CP P1 2026 file (<span class="hl-num">${c} URL</span>). Thank you.\n\n` +
+    `[Mail] Disputes priority 1 accepted <span class="hl-ts">${acc}</span> UTC \n` +
+    `Total: <span class="hl-num">${c} URL</span> Categorized:<span class="hl-num">${fraction}</span> \n` +
+    `Uploaded on GD: <span class="hl-num">${fraction}</span>\n` +
+    `Comment: Disputes Priority 1 Checkpoint <span class="hl-ts">${acc}</span>\n\n` +
+    `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
+    `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
+    `<span class="hl-jp">「Tagged as Immutable」</span><span class="hl-none">None</span> ` +
+    `<span class="hl-jp">「Security category」</span><span class="hl-num">${c} URLs</span>`;
+}
+
 // ── PREVIEW ──
 function updatePreview() {
   const fn   = getFilename();
   const urls = getUrls();
+  const v    = document.getElementById('vendor').value;
+  const acc  = document.getElementById('accepted').value.trim();
+
   document.getElementById('url-badge').textContent = urls.length + (urls.length === 1 ? ' URL' : ' URLs');
+
   const previewFn  = document.getElementById('preview-fn');
   const previewSub = document.getElementById('preview-sub');
   const btn        = document.getElementById('genBtn');
+  const wikiSec    = document.getElementById('wiki-section');
 
   if (fn) {
     previewFn.textContent  = fn + '.xlsx';
@@ -403,6 +512,37 @@ function updatePreview() {
     previewSub.textContent = '';
     btn.disabled = true;
   }
+
+  // Wiki section — only for Checkpoint
+  if (v === 'checkpoint' && acc && urls.length > 0) {
+    wikiSec.classList.add('visible');
+    renderWiki(acc, urls.length);
+  } else {
+    wikiSec.classList.remove('visible');
+  }
+}
+
+// ── COPY WIKI ──
+function copyWiki() {
+  const v    = document.getElementById('vendor').value;
+  const acc  = document.getElementById('accepted').value.trim();
+  const urls = getUrls();
+  if (v !== 'checkpoint' || !acc || !urls.length) return;
+
+  const text = buildWikiText(acc, urls.length);
+  navigator.clipboard.writeText(text).then(() => {
+    const btn   = document.getElementById('copy-btn');
+    const icon  = document.getElementById('copy-icon');
+    const label = document.getElementById('copy-label');
+    btn.classList.add('copied');
+    icon.textContent  = '✓';
+    label.textContent = 'Copied!';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      icon.textContent  = '⎘';
+      label.textContent = 'Copy';
+    }, 2000);
+  });
 }
 
 // ── GENERATE ──
@@ -413,7 +553,6 @@ function generate() {
 
   const wb = XLSX.utils.book_new();
 
-  // A=URL, B=empty, C=empty, D=99999, E=Immutable, F=categories
   const wsData = urls.map(url => [
     url,
     null,
