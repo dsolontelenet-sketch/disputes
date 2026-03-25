@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -271,6 +270,7 @@
         <option value="os">OS</option>
         <option value="is">IS</option>
         <option value="tw">TW</option>
+        <option value="partnerportal">Partner Portal</option>
       </select>
     </div>
 
@@ -448,13 +448,14 @@ function getFilename() {
   const v   = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
   if (!v || !acc) return null;
-  if (v === 'barracuda')  return `Disputes Priority 1 Barracuda accepted at ${acc}`;
-  if (v === 'zo')         return `Disputes Priority 1 ZO accepted at ${acc}`;
-  if (v === 'az')         return `Disputes Priority 1 AZ accepted at ${acc}`;
-  if (v === 'checkpoint') return `Disputes Priority 1 Checkpoint ${acc} Diovic`;
-  if (v === 'os')         return `Disputes Priority 2 OS accepted at ${acc}`;
-  if (v === 'is')         return `Disputes Priority 1 IS accepted at ${acc}`;
-  if (v === 'tw')         return `Disputes Priority 1 TW accepted at ${acc}`;
+  if (v === 'barracuda')     return `Disputes Priority 1 Barracuda  ${acc}`;
+  if (v === 'zo')            return `Disputes Priority 1 ZO accepted at ${acc}`;
+  if (v === 'az')            return `Disputes Priority 1 AZ accepted at ${acc}`;
+  if (v === 'checkpoint')    return `Disputes Priority 1 Checkpoint ${acc} Diovic`;
+  if (v === 'os')            return `Disputes Priority 2 OS accepted at ${acc}`;
+  if (v === 'is')            return `Disputes Priority 1 IS accepted at ${acc}`;
+  if (v === 'tw')            return `Disputes Priority 1 TW accepted at ${acc}`;
+  if (v === 'partnerportal') return `P1 dispute Partner Portal ${acc}`;
   if (v === 'microsoft') {
     return selectedPriority === 1
       ? `Disputes Priority 1 Microsoft ${acc}`
