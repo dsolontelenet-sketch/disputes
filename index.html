@@ -470,7 +470,7 @@ function buildWikiText(acc, count) {
   const fraction = `${c}/${c}`;
   // "URL" stays singular in the parenthetical; "URLs" is plural in Total when count >= 2
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} URL). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」None \n「Security category」None`;
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」None \n「Security category」None`;
 }
 
 function renderWiki(acc, count) {
