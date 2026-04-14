@@ -36,7 +36,7 @@
     padding: 2rem;
   }
 
-  .container { width: 100%; max-width: 660px; }
+  .container { width: 100%; max-width: 720px; }
 
   .header { margin-bottom: 2rem; }
   .header h1 {
@@ -63,15 +63,20 @@
     font-family: 'IBM Plex Mono', monospace;
   }
 
-  select, input[type="text"] {
+  select, input[type="text"], input[type="number"] {
     width: 100%; background: var(--bg);
     border: 1px solid var(--border); border-radius: 8px;
     padding: 0.75rem 1rem; color: var(--text);
     font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem;
     outline: none; transition: border-color 0.2s; appearance: none;
   }
-  select:focus, input[type="text"]:focus { border-color: var(--accent); }
+  select:focus, input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accent); }
   select option { background: #1a1d28; }
+
+  /* hide number input spin arrows */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
 
   .priority-group { display: none; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
   .priority-group.visible { display: flex; }
@@ -112,14 +117,41 @@
   .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
   .mode-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
 
+  /* ── URL ROW (one by one) ── */
+  .url-col-headers {
+    display: flex; align-items: center; gap: 0.5rem;
+    margin-bottom: 0.35rem; padding-left: 26px;
+  }
+  .url-col-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .url-col-label.url-lbl  { flex: 1; }
+  .url-col-label.cat-lbl  { width: 90px; flex-shrink: 0; }
+
   .url-rows { display: flex; flex-direction: column; gap: 0.45rem; }
+
   .url-row { display: flex; align-items: center; gap: 0.5rem; }
   .url-num {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem; color: var(--muted);
     min-width: 18px; text-align: right; flex-shrink: 0;
   }
-  .url-row input { flex: 1; padding: 0.55rem 0.85rem; font-size: 0.82rem; }
+
+  .url-row .inp-url  { flex: 1; padding: 0.55rem 0.85rem; font-size: 0.82rem; }
+
+  /* Category code input — fixed width, styled with an accent tint */
+  .url-row .inp-cat {
+    width: 90px; flex-shrink: 0;
+    padding: 0.55rem 0.6rem; font-size: 0.82rem;
+    text-align: center;
+    border-color: rgba(0,212,255,0.25);
+    color: var(--accent);
+  }
+  .url-row .inp-cat:focus { border-color: var(--accent); }
+  .url-row .inp-cat::placeholder { color: rgba(0,212,255,0.3); }
+
   .url-del {
     width: 28px; height: 28px; flex-shrink: 0;
     background: transparent; border: 1px solid var(--border);
@@ -307,6 +339,12 @@
 
       <!-- Single mode -->
       <div id="single-mode">
+        <!-- Column headers -->
+        <div class="url-col-headers">
+          <span class="url-col-label url-lbl">URL</span>
+          <span class="url-col-label cat-lbl" style="text-align:center;">Cat. Code <span style="color:rgba(0,212,255,0.5);font-size:0.6rem;">(col B)</span></span>
+          <span style="width:28px;flex-shrink:0;"></span>
+        </div>
         <div class="url-rows" id="url-rows"></div>
         <button class="url-add" onclick="addRow()">＋ Add another URL</button>
       </div>
@@ -316,7 +354,7 @@
         <textarea id="bulk-ta"
           placeholder="Paste URLs here — one per line:&#10;&#10;google.com&#10;facebook.com&#10;example.org&#10;malicious-site.net&#10;..."
           oninput="updatePreview()"></textarea>
-        <p class="hint" style="margin-top:0.4rem;">One URL per line • Empty lines are ignored</p>
+        <p class="hint" style="margin-top:0.4rem;">One URL per line • Empty lines are ignored • Category code not available in bulk mode</p>
       </div>
     </div>
 
@@ -393,20 +431,22 @@ function addRow() {
   row.className = 'url-row';
   row.innerHTML = `
     <span class="url-num">${idx}</span>
-    <input type="text" placeholder="e.g. google.com" oninput="updatePreview()" />
+    <input type="text" class="inp-url" placeholder="e.g. google.com" oninput="updatePreview()" />
+    <input type="number" class="inp-cat" placeholder="Code" oninput="updatePreview()" min="0" />
     <button class="url-del" onclick="delRow(this)" title="Remove">✕</button>
   `;
   wrap.appendChild(row);
   reindex();
   updatePreview();
-  row.querySelector('input').focus();
+  row.querySelector('.inp-url').focus();
 }
 
 function delRow(btn) {
   const wrap = document.getElementById('url-rows');
   const row  = btn.closest('.url-row');
   if (wrap.children.length <= 1) {
-    row.querySelector('input').value = '';
+    row.querySelector('.inp-url').value = '';
+    row.querySelector('.inp-cat').value = '';
     updatePreview();
     return;
   }
@@ -433,10 +473,18 @@ function cleanUrl(url) {
 function getUrls() {
   if (mode === 'bulk') {
     return document.getElementById('bulk-ta').value
-      .split('\n').map(l => cleanUrl(l)).filter(l => l);
+      .split('\n')
+      .map(l => ({ url: cleanUrl(l), cat: null }))
+      .filter(r => r.url);
   }
-  return Array.from(document.querySelectorAll('#url-rows input'))
-    .map(i => cleanUrl(i.value)).filter(v => v);
+  return Array.from(document.querySelectorAll('#url-rows .url-row'))
+    .map(row => {
+      const url = cleanUrl(row.querySelector('.inp-url').value);
+      const catRaw = row.querySelector('.inp-cat').value.trim();
+      const cat = catRaw !== '' ? Number(catRaw) : null;
+      return { url, cat };
+    })
+    .filter(r => r.url);
 }
 
 function pad(n) {
@@ -468,7 +516,6 @@ function getFilename() {
 function buildWikiText(acc, count) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
-  // "URL" stays singular in the parenthetical; "URLs" is plural in Total when count >= 2
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
   return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」None \n「Security category」None`;
 }
@@ -496,11 +543,11 @@ function renderWiki(acc, count) {
 // ── PREVIEW ──
 function updatePreview() {
   const fn   = getFilename();
-  const urls = getUrls();
+  const rows = getUrls();
   const v    = document.getElementById('vendor').value;
   const acc  = document.getElementById('accepted').value.trim();
 
-  document.getElementById('url-badge').textContent = urls.length + (urls.length === 1 ? ' URL' : ' URLs');
+  document.getElementById('url-badge').textContent = rows.length + (rows.length === 1 ? ' URL' : ' URLs');
 
   const previewFn  = document.getElementById('preview-fn');
   const previewSub = document.getElementById('preview-sub');
@@ -509,20 +556,23 @@ function updatePreview() {
 
   if (fn) {
     previewFn.textContent  = fn + '.xlsx';
-    previewSub.textContent = urls.length > 0
-      ? `✓ ${urls.length} row${urls.length > 1 ? 's' : ''} will be written to the Excel file`
-      : 'No URLs entered yet';
-    btn.disabled = urls.length === 0;
+    if (rows.length > 0) {
+      const withCat = rows.filter(r => r.cat !== null).length;
+      previewSub.textContent = `✓ ${rows.length} row${rows.length > 1 ? 's' : ''} will be written` +
+        (withCat > 0 ? ` · ${withCat} with category code` : '');
+    } else {
+      previewSub.textContent = 'No URLs entered yet';
+    }
+    btn.disabled = rows.length === 0;
   } else {
     previewFn.textContent  = '—';
     previewSub.textContent = '';
     btn.disabled = true;
   }
 
-  // Wiki section — only for Checkpoint
-  if (v === 'checkpoint' && acc && urls.length > 0) {
+  if (v === 'checkpoint' && acc && rows.length > 0) {
     wikiSec.classList.add('visible');
-    renderWiki(acc, urls.length);
+    renderWiki(acc, rows.length);
   } else {
     wikiSec.classList.remove('visible');
   }
@@ -532,10 +582,10 @@ function updatePreview() {
 function copyWiki() {
   const v    = document.getElementById('vendor').value;
   const acc  = document.getElementById('accepted').value.trim();
-  const urls = getUrls();
-  if (v !== 'checkpoint' || !acc || !urls.length) return;
+  const rows = getUrls();
+  if (v !== 'checkpoint' || !acc || !rows.length) return;
 
-  const text = buildWikiText(acc, urls.length);
+  const text = buildWikiText(acc, rows.length);
   navigator.clipboard.writeText(text).then(() => {
     const btn   = document.getElementById('copy-btn');
     const icon  = document.getElementById('copy-icon');
@@ -554,14 +604,14 @@ function copyWiki() {
 // ── GENERATE ──
 function generate() {
   const fn   = getFilename();
-  const urls = getUrls();
-  if (!fn || !urls.length) return;
+  const rows = getUrls();
+  if (!fn || !rows.length) return;
 
   const wb = XLSX.utils.book_new();
 
-  const wsData = urls.map(url => [
+  const wsData = rows.map(({ url, cat }) => [
     url,
-    null,
+    cat !== null ? cat : null,
     null,
     99999,
     'Immutable',
@@ -569,7 +619,7 @@ function generate() {
   ]);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{ wch: 34 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 80 }];
+  ws['!cols'] = [{ wch: 34 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 80 }];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, fn + '.xlsx');
