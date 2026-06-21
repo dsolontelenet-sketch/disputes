@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -93,6 +94,21 @@
   }
   .priority-btn:hover { border-color: var(--accent); color: var(--accent); }
   .priority-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+
+  /* ── CHECKPOINT NAME ── */
+  .cp-name-field { display: none; margin-bottom: 1.5rem; }
+  .cp-name-field.visible { display: block; }
+
+  .cp-name-inner { position: relative; }
+  .cp-name-inner input { padding-right: 6rem; }
+  .cp-name-default-badge {
+    position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
+    color: var(--muted); background: rgba(107,122,153,0.12);
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 0.1rem 0.55rem; pointer-events: none; transition: opacity 0.2s;
+  }
+  .cp-name-inner input:not(:placeholder-shown) ~ .cp-name-default-badge { opacity: 0; }
 
   /* ── URL SECTION ── */
   .url-header {
@@ -334,6 +350,8 @@
         <option value="os">OS</option>
         <option value="is">IS</option>
         <option value="tw">TW</option>
+        <option value="so">SO</option>
+        <option value="fs">FS</option>
         <option value="partnerportal">Partner Portal</option>
       </select>
     </div>
@@ -345,7 +363,18 @@
         <button class="priority-btn active" data-p="1" onclick="selectPriority(this)">Priority 1</button>
         <button class="priority-btn" data-p="2" onclick="selectPriority(this)">Priority 2</button>
         <button class="priority-btn" data-p="3" id="p3btn" onclick="selectPriority(this)">Priority 3</button>
+        <button class="priority-btn" data-p="4" id="p4btn" onclick="selectPriority(this)">Priority 4</button>
       </div>
+    </div>
+
+    <!-- Checkpoint Name -->
+    <div class="cp-name-field" id="cpNameField">
+      <label>Your Name <span style="color:var(--accent);font-size:0.65rem;letter-spacing:0.05em;text-transform:none;font-family:'IBM Plex Sans',sans-serif;">(used in filename)</span></label>
+      <div class="cp-name-inner">
+        <input type="text" id="cpName" placeholder="Diovic" oninput="updatePreview()" autocomplete="off" />
+        <span class="cp-name-default-badge">default: Diovic</span>
+      </div>
+      <p class="hint">Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default</p>
     </div>
 
     <hr class="divider">
@@ -404,7 +433,7 @@
       <div class="wiki-header">
         <div class="wiki-title">
           📋 Wiki Message
-          <span class="wiki-badge">Checkpoint only</span>
+          <span class="wiki-badge">Checkpoint P1 only</span>
         </div>
         <button class="copy-btn" id="copy-btn-cp" onclick="copyWiki('cp')">
           <span id="copy-icon-cp">⎘</span>
@@ -445,13 +474,27 @@ window.addEventListener('DOMContentLoaded', () => addRow());
 // ── VENDOR ──
 function onVendorChange() {
   const v = document.getElementById('vendor').value;
-  document.getElementById('priorityField').style.display = ['microsoft','os'].includes(v) ? 'block' : 'none';
-  document.getElementById('p3btn').style.display = v === 'microsoft' ? '' : 'none';
+
+  // Vendors that show a priority selector
+  const showPriority = ['microsoft', 'os', 'checkpoint', 'fs'].includes(v);
+  document.getElementById('priorityField').style.display = showPriority ? 'block' : 'none';
+
+  // Priority 3 button visible for: microsoft, checkpoint, fs
+  document.getElementById('p3btn').style.display = ['microsoft', 'checkpoint', 'fs'].includes(v) ? '' : 'none';
+  // Priority 4 button visible for: checkpoint, fs
+  document.getElementById('p4btn').style.display = ['checkpoint', 'fs'].includes(v) ? '' : 'none';
+
+  // Reset to Priority 1 whenever vendor changes (except OS which forces P2)
+  document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   if (v === 'os') {
-    document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('[data-p="2"]').classList.add('active');
     selectedPriority = 2;
+  } else {
+    document.querySelector('[data-p="1"]').classList.add('active');
+    selectedPriority = 1;
   }
+
+  updateCpNameVisibility();
   updatePreview();
 }
 
@@ -459,7 +502,15 @@ function selectPriority(btn) {
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedPriority = parseInt(btn.dataset.p);
+  updateCpNameVisibility();
   updatePreview();
+}
+
+// Checkpoint name field only shows for Checkpoint vendor AND Priority 1
+function updateCpNameVisibility() {
+  const v = document.getElementById('vendor').value;
+  const cpNameField = document.getElementById('cpNameField');
+  cpNameField.classList.toggle('visible', v === 'checkpoint' && selectedPriority === 1);
 }
 
 // ── MODE ──
@@ -540,6 +591,11 @@ function pad(n) {
   return String(n).padStart(2, '0');
 }
 
+function getCpName() {
+  const raw = document.getElementById('cpName').value.trim();
+  return raw || 'Diovic';
+}
+
 // ── FILENAME ──
 function getFilename() {
   const v   = document.getElementById('vendor').value;
@@ -548,10 +604,14 @@ function getFilename() {
   if (v === 'barracuda')     return `Disputes Priority 1 Barracuda  ${acc}`;
   if (v === 'zo')            return `Disputes Priority 1 ZO accepted at ${acc}`;
   if (v === 'az')            return `Disputes Priority 1 AZ accepted at ${acc}`;
-  if (v === 'checkpoint')    return `Disputes Priority 1 Checkpoint ${acc} Diovic`;
+  if (v === 'checkpoint')    return selectedPriority === 1
+    ? `Disputes Priority 1 Checkpoint ${acc} ${getCpName()}`
+    : `Disputes Priority ${selectedPriority} Checkpoint ${acc}`;
   if (v === 'os')            return `Disputes Priority 2 OS accepted at ${acc}`;
   if (v === 'is')            return `Disputes Priority 1 IS accepted at ${acc}`;
   if (v === 'tw')            return `Disputes Priority 1 TW accepted at ${acc}`;
+  if (v === 'so')            return `Disputes Priority 4 SO accepted at ${acc}`;
+  if (v === 'fs')            return `Disputes Priority ${selectedPriority} FS accepted at ${acc}`;
   if (v === 'partnerportal') return `P1 dispute Partner Portal ${acc}`;
   if (v === 'microsoft') {
     return selectedPriority === 1
@@ -652,8 +712,8 @@ function updatePreview() {
     btn.disabled = true;
   }
 
-  // Checkpoint wiki
-  if (v === 'checkpoint' && acc && rows.length > 0) {
+  // Checkpoint wiki — only for Priority 1
+  if (v === 'checkpoint' && selectedPriority === 1 && acc && rows.length > 0) {
     wikiSecCp.classList.add('visible');
     renderCPWiki(acc, rows.length);
   } else {
@@ -676,7 +736,7 @@ function copyWiki(vendor) {
   const rows = getUrls();
 
   let text = '';
-  if (vendor === 'cp' && v === 'checkpoint' && acc && rows.length) {
+  if (vendor === 'cp' && v === 'checkpoint' && selectedPriority === 1 && acc && rows.length) {
     text = buildCPWikiText(acc, rows.length);
   } else if (vendor === 'tw' && v === 'tw' && acc && rows.length) {
     text = buildTWWikiText(acc, rows.length);
