@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,21 +93,6 @@
   }
   .priority-btn:hover { border-color: var(--accent); color: var(--accent); }
   .priority-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
-
-  /* ── CHECKPOINT NAME ── */
-  .cp-name-field { display: none; margin-bottom: 1.5rem; }
-  .cp-name-field.visible { display: block; }
-
-  .cp-name-inner { position: relative; }
-  .cp-name-inner input { padding-right: 6rem; }
-  .cp-name-default-badge {
-    position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
-    color: var(--muted); background: rgba(107,122,153,0.12);
-    border: 1px solid var(--border); border-radius: 20px;
-    padding: 0.1rem 0.55rem; pointer-events: none; transition: opacity 0.2s;
-  }
-  .cp-name-inner input:not(:placeholder-shown) ~ .cp-name-default-badge { opacity: 0; }
 
   /* ── URL SECTION ── */
   .url-header {
@@ -367,16 +351,6 @@
       </div>
     </div>
 
-    <!-- Checkpoint Name -->
-    <div class="cp-name-field" id="cpNameField">
-      <label>Your Name <span style="color:var(--accent);font-size:0.65rem;letter-spacing:0.05em;text-transform:none;font-family:'IBM Plex Sans',sans-serif;">(used in filename)</span></label>
-      <div class="cp-name-inner">
-        <input type="text" id="cpName" placeholder="Diovic" oninput="updatePreview()" autocomplete="off" />
-        <span class="cp-name-default-badge">default: Diovic</span>
-      </div>
-      <p class="hint">Leave blank to use <strong style="color:var(--text);">Diovic</strong> as default</p>
-    </div>
-
     <hr class="divider">
 
     <!-- Accepted -->
@@ -494,7 +468,6 @@ function onVendorChange() {
     selectedPriority = 1;
   }
 
-  updateCpNameVisibility();
   updatePreview();
 }
 
@@ -502,15 +475,7 @@ function selectPriority(btn) {
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   selectedPriority = parseInt(btn.dataset.p);
-  updateCpNameVisibility();
   updatePreview();
-}
-
-// Checkpoint name field only shows for Checkpoint vendor AND Priority 1
-function updateCpNameVisibility() {
-  const v = document.getElementById('vendor').value;
-  const cpNameField = document.getElementById('cpNameField');
-  cpNameField.classList.toggle('visible', v === 'checkpoint' && selectedPriority === 1);
 }
 
 // ── MODE ──
@@ -591,11 +556,6 @@ function pad(n) {
   return String(n).padStart(2, '0');
 }
 
-function getCpName() {
-  const raw = document.getElementById('cpName').value.trim();
-  return raw || 'Diovic';
-}
-
 // ── FILENAME ──
 function getFilename() {
   const v   = document.getElementById('vendor').value;
@@ -605,7 +565,7 @@ function getFilename() {
   if (v === 'zo')            return `Disputes Priority 1 ZO accepted at ${acc}`;
   if (v === 'az')            return `Disputes Priority 1 AZ accepted at ${acc}`;
   if (v === 'checkpoint')    return selectedPriority === 1
-    ? `Disputes Priority 1 Checkpoint ${acc} ${getCpName()}`
+    ? `Disputes Priority 1 Checkpoint ${acc} Diovic`
     : `Disputes Priority ${selectedPriority} Checkpoint ${acc}`;
   if (v === 'os')            return `Disputes Priority 2 OS accepted at ${acc}`;
   if (v === 'is')            return `Disputes Priority 1 IS accepted at ${acc}`;
