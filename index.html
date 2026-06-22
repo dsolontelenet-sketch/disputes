@@ -131,7 +131,8 @@
     text-transform: uppercase; letter-spacing: 0.08em;
   }
   .url-col-label.url-lbl  { flex: 1; }
-  .url-col-label.cat-lbl  { width: 90px; flex-shrink: 0; }
+  .url-col-label.cat-lbl  { width: 90px; flex-shrink: 0; text-align: center; }
+  .url-col-label.sec-lbl  { width: 78px; flex-shrink: 0; text-align: center; }
 
   .url-rows { display: flex; flex-direction: column; gap: 0.45rem; }
 
@@ -154,6 +155,30 @@
   }
   .url-row .inp-cat:focus { border-color: var(--accent); }
   .url-row .inp-cat::placeholder { color: rgba(0,212,255,0.3); }
+
+  .url-row .inp-sec {
+    width: 90px; flex-shrink: 0;
+    padding: 0.55rem 0.6rem; font-size: 0.82rem;
+    text-align: center;
+    border-color: rgba(0,212,255,0.25);
+    color: var(--accent);
+  }
+  .url-row .inp-sec:focus { border-color: var(--accent); }
+  .url-row .inp-sec::placeholder { color: rgba(0,212,255,0.3); }
+
+  .url-row .inp-seccat {
+    width: 110px; flex-shrink: 0;
+    padding: 0.55rem 0.6rem; font-size: 0.82rem;
+    text-align: center;
+    border-color: rgba(251,146,60,0.35);
+    color: #fb923c;
+  }
+  .url-row .inp-seccat:focus { border-color: #fb923c; }
+  .url-row .inp-seccat::placeholder { color: rgba(251,146,60,0.4); }
+
+  .url-row .inp-seccat.has-error,
+  .url-row .inp-cat.has-error,
+  .url-row .inp-sec.has-error { border-color: var(--danger); box-shadow: 0 0 0 1px rgba(255,77,77,0.3); }
 
   .url-del {
     width: 28px; height: 28px; flex-shrink: 0;
@@ -202,6 +227,15 @@
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem; color: var(--muted); margin-top: 0.4rem;
   }
+
+  .validation-banner {
+    display: none;
+    background: rgba(255,77,77,0.08); border: 1px solid rgba(255,77,77,0.35);
+    border-radius: 8px; padding: 0.75rem 1rem; margin-top: 1rem;
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.76rem;
+    color: var(--danger); line-height: 1.6;
+  }
+  .validation-banner.visible { display: block; }
 
   .btn-generate {
     width: 100%; margin-top: 1.5rem; padding: 1rem;
@@ -377,7 +411,9 @@
         <!-- Column headers -->
         <div class="url-col-headers">
           <span class="url-col-label url-lbl">URL</span>
-          <span class="url-col-label cat-lbl" style="text-align:center;">Cat. Code <span style="color:rgba(0,212,255,0.5);font-size:0.6rem;">(col B)</span></span>
+          <span class="url-col-label cat-lbl">Primary <span style="color:rgba(0,212,255,0.5);font-size:0.6rem;">(col B)</span></span>
+          <span class="url-col-label sec-lbl">Secondary <span style="color:rgba(0,212,255,0.5);font-size:0.6rem;">(col C)</span></span>
+          <span class="url-col-label sec-lbl">Security <span style="color:rgba(251,146,60,0.55);font-size:0.6rem;">(col D)</span></span>
           <span style="width:28px;flex-shrink:0;"></span>
         </div>
         <div class="url-rows" id="url-rows"></div>
@@ -389,9 +425,12 @@
         <textarea id="bulk-ta"
           placeholder="Paste URLs here — one per line:&#10;&#10;google.com&#10;facebook.com&#10;example.org&#10;malicious-site.net&#10;..."
           oninput="updatePreview()"></textarea>
-        <p class="hint" style="margin-top:0.4rem;">One URL per line • Empty lines are ignored • Category code not available in bulk mode</p>
+        <p class="hint" style="margin-top:0.4rem;">One URL per line • Empty lines are ignored • Category/Secondary/Security codes not available in bulk mode</p>
       </div>
     </div>
+
+    <!-- Validation banner -->
+    <div class="validation-banner" id="validation-banner"></div>
 
     <!-- Preview -->
     <div class="preview-box">
@@ -497,7 +536,9 @@ function addRow() {
   row.innerHTML = `
     <span class="url-num">${idx}</span>
     <input type="text" class="inp-url" placeholder="e.g. google.com" oninput="updatePreview()" />
-    <input type="number" class="inp-cat" placeholder="Code" oninput="updatePreview()" min="0" />
+    <input type="number" class="inp-cat" placeholder="Primary" oninput="updatePreview()" min="0" />
+    <input type="number" class="inp-sec" placeholder="Secondary" oninput="updatePreview()" min="0" />
+    <input type="text" class="inp-seccat" placeholder="Security" oninput="updatePreview()" />
     <button class="url-del" onclick="delRow(this)" title="Remove">✕</button>
   `;
   wrap.appendChild(row);
@@ -512,6 +553,8 @@ function delRow(btn) {
   if (wrap.children.length <= 1) {
     row.querySelector('.inp-url').value = '';
     row.querySelector('.inp-cat').value = '';
+    row.querySelector('.inp-sec').value = '';
+    row.querySelector('.inp-seccat').value = '';
     updatePreview();
     return;
   }
@@ -539,21 +582,73 @@ function getUrls() {
   if (mode === 'bulk') {
     return document.getElementById('bulk-ta').value
       .split('\n')
-      .map(l => ({ url: cleanUrl(l), cat: null }))
+      .map(l => ({ url: cleanUrl(l), cat: null, sec: null, secCat: '' }))
       .filter(r => r.url);
   }
   return Array.from(document.querySelectorAll('#url-rows .url-row'))
     .map(row => {
-      const url = cleanUrl(row.querySelector('.inp-url').value);
-      const catRaw = row.querySelector('.inp-cat').value.trim();
-      const cat = catRaw !== '' ? Number(catRaw) : null;
-      return { url, cat };
+      const url       = cleanUrl(row.querySelector('.inp-url').value);
+      const catRaw    = row.querySelector('.inp-cat').value.trim();
+      const secRaw    = row.querySelector('.inp-sec').value.trim();
+      const secCatRaw = row.querySelector('.inp-seccat').value.trim();
+      const cat    = catRaw !== '' ? Number(catRaw) : null;
+      const sec    = secRaw !== '' ? Number(secRaw) : null;
+      const secCat = secCatRaw; // kept as string; blank means "not provided"
+      return { url, cat, sec, secCat };
     })
     .filter(r => r.url);
 }
 
+// Returns { missingPrimary: [rowNum,...], missing20079Security: [rowNum,...] }
+// Rule 1: Primary = 20079 requires Security (col D) to be filled.
+// Rule 2: Secondary (col C) or Security (col D) filled requires Primary (col B) to be filled.
+//         If Primary, Secondary, and Security are ALL blank, the row is valid (generates as template default).
+function getInvalidRows() {
+  if (mode !== 'single') return { missingPrimary: [], missing20079Security: [] };
+  const rows = Array.from(document.querySelectorAll('#url-rows .url-row'));
+  const missingPrimary = [];
+  const missing20079Security = [];
+
+  rows.forEach((row, i) => {
+    const url = cleanUrl(row.querySelector('.inp-url').value);
+    const catInput    = row.querySelector('.inp-cat');
+    const secInput    = row.querySelector('.inp-sec');
+    const secCatInput = row.querySelector('.inp-seccat');
+
+    catInput.classList.remove('has-error');
+    secInput.classList.remove('has-error');
+    secCatInput.classList.remove('has-error');
+
+    if (!url) return;
+
+    const catRaw    = catInput.value.trim();
+    const secRaw    = secInput.value.trim();
+    const secCatRaw = secCatInput.value.trim();
+
+    // Rule 2: Secondary or Security filled, but Primary blank → block, warn on the Primary box.
+    if (catRaw === '' && (secRaw !== '' || secCatRaw !== '')) {
+      missingPrimary.push(i + 1);
+      catInput.classList.add('has-error');
+      return; // don't also evaluate rule 1 when Primary isn't even filled
+    }
+
+    // Rule 1: Primary = 20079 requires Security (col D).
+    if (catRaw === '20079' && secCatRaw === '') {
+      missing20079Security.push(i + 1);
+      secCatInput.classList.add('has-error');
+    }
+  });
+
+  return { missingPrimary, missing20079Security };
+}
+
 function pad(n) {
   return String(n).padStart(2, '0');
+}
+
+// Extract just the date part (first 8 chars) from a timestamp like 20260506T123000
+function dateOnly(acc) {
+  return acc.replace('T', '').substring(0, 8);
 }
 
 // ── FILENAME ──
@@ -614,27 +709,25 @@ function buildTWWikiText(acc, count) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
-  // Use only the date part (first 8 chars) for TW wiki message display
-  const dateOnly = acc.replace('T', '').substring(0, 8);
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes TW P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes Priority 1 TW accepted at ${dateOnly}\nTotal: ${c} ${totalLabel}\nCategorized: ${fraction}\nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 TW accepted at ${dateOnly}\n\n「The same category as the secondary」None\n「The URL already has the same categories with the same order」None\n「Tagged as Immutable」None\n「Security category」None`;
+  const d = dateOnly(acc);
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes TW P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes Priority 1 TW accepted at ${d}\nTotal: ${c} ${totalLabel}\nCategorized: ${fraction}\nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 TW accepted at ${d}\n\n「The same category as the secondary」None\n「The URL already has the same categories with the same order」None\n「Tagged as Immutable」None\n「Security category」None`;
 }
 
 function renderTWWiki(acc, count) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
-  // Use only the date part for display
-  const dateOnly = acc.replace('T', '').substring(0, 8);
+  const d = dateOnly(acc);
   const el = document.getElementById('wiki-message-tw');
 
   el.innerHTML =
     `Hi Chisato-san,\n\n` +
     `Done uploading/updating on GD the data from disputes TW P1 2026 file (<span class="hl-tw-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
-    `[Mail] Disputes Priority 1 TW accepted at <span class="hl-tw-ts">${dateOnly}</span>\n` +
+    `[Mail] Disputes Priority 1 TW accepted at <span class="hl-tw-ts">${d}</span>\n` +
     `Total: <span class="hl-tw-num">${c} ${totalLabel}</span>\n` +
     `Categorized: <span class="hl-tw-num">${fraction}</span>\n` +
     `Uploaded on GD: <span class="hl-tw-num">${fraction}</span>\n` +
-    `Comment: Disputes Priority 1 TW accepted at <span class="hl-tw-ts">${dateOnly}</span>\n\n` +
+    `Comment: Disputes Priority 1 TW accepted at <span class="hl-tw-ts">${d}</span>\n\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span>\n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span>\n` +
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="hl-none">None</span>\n` +
@@ -643,10 +736,12 @@ function renderTWWiki(acc, count) {
 
 // ── PREVIEW ──
 function updatePreview() {
-  const fn   = getFilename();
-  const rows = getUrls();
-  const v    = document.getElementById('vendor').value;
-  const acc  = document.getElementById('accepted').value.trim();
+  const fn      = getFilename();
+  const rows    = getUrls();
+  const v       = document.getElementById('vendor').value;
+  const acc     = document.getElementById('accepted').value.trim();
+  const invalid = getInvalidRows();
+  const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
 
   document.getElementById('url-badge').textContent = rows.length + (rows.length === 1 ? ' URL' : ' URLs');
 
@@ -655,17 +750,38 @@ function updatePreview() {
   const btn        = document.getElementById('genBtn');
   const wikiSecCp  = document.getElementById('wiki-section-cp');
   const wikiSecTw  = document.getElementById('wiki-section-tw');
+  const banner     = document.getElementById('validation-banner');
+
+  if (hasInvalid) {
+    const msgs = [];
+    if (invalid.missingPrimary.length > 0) {
+      msgs.push(`⚠ Row${invalid.missingPrimary.length > 1 ? 's' : ''} ${invalid.missingPrimary.join(', ')}: Secondary or Security was entered, so Primary (col B) is required before you can generate the file.`);
+    }
+    if (invalid.missing20079Security.length > 0) {
+      msgs.push(`⚠ Row${invalid.missing20079Security.length > 1 ? 's' : ''} ${invalid.missing20079Security.join(', ')}: Primary code 20079 requires a Security Category (col D) before you can generate the file.`);
+    }
+    banner.classList.add('visible');
+    banner.innerHTML = msgs.join('<br>');
+  } else {
+    banner.classList.remove('visible');
+    banner.textContent = '';
+  }
 
   if (fn) {
     previewFn.textContent  = fn + '.xlsx';
     if (rows.length > 0) {
-      const withCat = rows.filter(r => r.cat !== null).length;
-      previewSub.textContent = `✓ ${rows.length} row${rows.length > 1 ? 's' : ''} will be written` +
-        (withCat > 0 ? ` · ${withCat} with category code` : '');
+      const withCat    = rows.filter(r => r.cat !== null && r.cat !== undefined).length;
+      const withSec    = rows.filter(r => r.sec !== null && r.sec !== undefined).length;
+      const withSecCat = rows.filter(r => r.secCat).length;
+      let subParts = [`✓ ${rows.length} row${rows.length > 1 ? 's' : ''} will be written`];
+      if (withCat > 0)    subParts.push(`${withCat} with primary code`);
+      if (withSec > 0)    subParts.push(`${withSec} with secondary code`);
+      if (withSecCat > 0) subParts.push(`${withSecCat} with security category`);
+      previewSub.textContent = subParts.join(' · ');
     } else {
       previewSub.textContent = 'No URLs entered yet';
     }
-    btn.disabled = rows.length === 0;
+    btn.disabled = rows.length === 0 || hasInvalid;
   } else {
     previewFn.textContent  = '—';
     previewSub.textContent = '';
@@ -720,24 +836,40 @@ function copyWiki(vendor) {
 }
 
 // ── GENERATE ──
+// Column layout: A=URL, B=Primary, C=Secondary, D=Security Category, E=Immutable flag, F=template tail
+//  - If Primary, Secondary, and Security are ALL blank → row generates exactly like the template default
+//    (col B blank, col C blank, col D = 99999, col E = "Immutable").
+//  - Col B (Primary): if not provided, falls back to null
+//  - Col C (Secondary): only written if the user provided a value; otherwise null
+//  - Col D (Security Category): if provided, it's written AND Col E ("Immutable") is cleared (blank)
+//                                if not provided, Col D stays 99999 (template default) and Col E keeps "Immutable"
+//  - Rule: if Secondary or Security is filled, Primary becomes required — enforced before this runs (getInvalidRows)
+//  - Rule: Primary = 20079 requires Col D to be filled — enforced before this runs (getInvalidRows)
 function generate() {
-  const fn   = getFilename();
-  const rows = getUrls();
-  if (!fn || !rows.length) return;
+  const fn      = getFilename();
+  const rows    = getUrls();
+  const invalid = getInvalidRows();
+  const hasInvalid = invalid.missingPrimary.length > 0 || invalid.missing20079Security.length > 0;
+  if (!fn || !rows.length || hasInvalid) return;
 
   const wb = XLSX.utils.book_new();
 
-  const wsData = rows.map(({ url, cat }) => [
-    url,
-    cat !== null ? cat : null,
-    null,
-    99999,
-    'Immutable',
-    'UCReviewed,CLReviewed,CLRetain,HTTPError,IWCC,InTheClear,Uncategorized,UnknownHost,Undeliverable,Deleted,StDnsError,NRD,DLCSkip'
-  ]);
+  const wsData = rows.map(({ url, cat, sec, secCat }) => {
+    const hasSecurityCat = secCat !== null && secCat !== undefined && secCat !== '';
+    const colD = hasSecurityCat ? secCat : 99999;
+    const colE = hasSecurityCat ? '' : 'Immutable';
+    return [
+      url,
+      cat !== null && cat !== undefined ? cat : null,
+      sec !== null && sec !== undefined ? sec : null,
+      colD,
+      colE,
+      'UCReviewed,CLReviewed,CLRetain,HTTPError,IWCC,InTheClear,Uncategorized,UnknownHost,Undeliverable,Deleted,StDnsError,NRD,DLCSkip'
+    ];
+  });
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [{ wch: 34 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 80 }];
+  ws['!cols'] = [{ wch: 34 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 80 }];
 
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, fn + '.xlsx');
