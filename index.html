@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -379,7 +380,7 @@
       <label>Priority</label>
       <div class="priority-group visible">
         <button class="priority-btn active" data-p="1" onclick="selectPriority(this)">Priority 1</button>
-        <button class="priority-btn" data-p="2" onclick="selectPriority(this)">Priority 2</button>
+        <button class="priority-btn" data-p="2" id="p2btn" onclick="selectPriority(this)">Priority 2</button>
         <button class="priority-btn" data-p="3" id="p3btn" onclick="selectPriority(this)">Priority 3</button>
         <button class="priority-btn" data-p="4" id="p4btn" onclick="selectPriority(this)">Priority 4</button>
       </div>
@@ -479,6 +480,27 @@
 </div>
 
 <script>
+/* ════════════════════════════════════════════
+   VENDOR PRIORITY CONFIG
+   Defines which priority buttons are shown and
+   which priority is the default for each vendor.
+   Matches the team-wide Disputes File Generator:
+   ZO, AZ, OS, IS, SO, FS all support Priority 1-4.
+   ════════════════════════════════════════════ */
+const VENDOR_CONFIG = {
+  barracuda:     { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
+  zo:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  az:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  checkpoint:    { showPriority: true,  availablePriorities: [1,3,4],     defaultPriority: 1 },
+  microsoft:     { showPriority: true,  availablePriorities: [1,2,3],     defaultPriority: 1 },
+  os:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  is:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  tw:            { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
+  so:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  fs:            { showPriority: true,  availablePriorities: [1,2,3,4],   defaultPriority: 1 },
+  partnerportal: { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
+};
+
 let selectedPriority = 1;
 let mode = 'single';
 
@@ -487,33 +509,39 @@ window.addEventListener('DOMContentLoaded', () => addRow());
 // ── VENDOR ──
 function onVendorChange() {
   const v = document.getElementById('vendor').value;
+  const cfg = VENDOR_CONFIG[v] || { showPriority: false, availablePriorities: [], defaultPriority: 1 };
 
-  // Vendors that show a priority selector
-  const showPriority = ['microsoft', 'os', 'checkpoint', 'fs'].includes(v);
-  document.getElementById('priorityField').style.display = showPriority ? 'block' : 'none';
+  // Show/hide priority field
+  document.getElementById('priorityField').style.display = cfg.showPriority ? 'block' : 'none';
 
-  // Priority 3 button visible for: microsoft, checkpoint, fs
-  document.getElementById('p3btn').style.display = ['microsoft', 'checkpoint', 'fs'].includes(v) ? '' : 'none';
-  // Priority 4 button visible for: checkpoint, fs
-  document.getElementById('p4btn').style.display = ['checkpoint', 'fs'].includes(v) ? '' : 'none';
+  // Show/hide individual priority buttons based on vendor config
+  [1, 2, 3, 4].forEach(p => {
+    const btn = document.querySelector(`.priority-btn[data-p="${p}"]`);
+    if (btn) {
+      btn.style.display = cfg.availablePriorities.includes(p) ? '' : 'none';
+    }
+  });
 
-  // Reset to Priority 1 whenever vendor changes (except OS which forces P2)
+  // Reset all buttons, then activate the default priority
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
-  if (v === 'os') {
-    document.querySelector('[data-p="2"]').classList.add('active');
-    selectedPriority = 2;
-  } else {
-    document.querySelector('[data-p="1"]').classList.add('active');
-    selectedPriority = 1;
-  }
+  selectedPriority = cfg.defaultPriority;
+  const defaultBtn = document.querySelector(`.priority-btn[data-p="${selectedPriority}"]`);
+  if (defaultBtn) defaultBtn.classList.add('active');
 
   updatePreview();
 }
 
 function selectPriority(btn) {
+  const v = document.getElementById('vendor').value;
+  const cfg = VENDOR_CONFIG[v] || { availablePriorities: [] };
+  const p = parseInt(btn.dataset.p);
+
+  // Only allow selecting priorities that are available for this vendor
+  if (!cfg.availablePriorities.includes(p)) return;
+
   document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  selectedPriority = parseInt(btn.dataset.p);
+  selectedPriority = p;
   updatePreview();
 }
 
@@ -652,28 +680,57 @@ function dateOnly(acc) {
 }
 
 // ── FILENAME ──
+// Vendors with priority: ZO, AZ, OS, IS, SO all follow the pattern:
+//   "Disputes Priority {N} {VENDOR_LABEL} accepted at {ACC}"
+// Special cases remain unchanged (Checkpoint, Microsoft, Barracuda, TW, FS, Partner Portal).
 function getFilename() {
   const v   = document.getElementById('vendor').value;
   const acc = document.getElementById('accepted').value.trim();
   if (!v || !acc) return null;
-  if (v === 'barracuda')     return `Disputes Priority 1 Barracuda  ${acc}`;
-  if (v === 'zo')            return `Disputes Priority 1 ZO accepted at ${acc}`;
-  if (v === 'az')            return `Disputes Priority 1 AZ accepted at ${acc}`;
-  if (v === 'checkpoint')    return selectedPriority === 1
-    ? `Disputes Priority 1 Checkpoint ${acc} Diovic`
-    : `Disputes Priority ${selectedPriority} Checkpoint ${acc}`;
-  if (v === 'os')            return `Disputes Priority 2 OS accepted at ${acc}`;
-  if (v === 'is')            return `Disputes Priority 1 IS accepted at ${acc}`;
-  if (v === 'tw')            return `Disputes Priority 1 TW accepted at ${acc}`;
-  if (v === 'so')            return `Disputes Priority 4 SO accepted at ${acc}`;
-  if (v === 'fs')            return `Disputes Priority ${selectedPriority} FS accepted at ${acc}`;
-  if (v === 'partnerportal') return `P1 dispute Partner Portal ${acc}`;
-  if (v === 'microsoft') {
-    return selectedPriority === 1
-      ? `Disputes Priority 1 Microsoft ${acc}`
-      : `Disputes Priority ${selectedPriority} Microsoft accepted at ${acc}`;
+
+  const p = selectedPriority;
+
+  switch (v) {
+    case 'barracuda':
+      return `Disputes Priority 1 Barracuda accepted at ${acc}`;
+
+    case 'zo':
+      return `Disputes Priority ${p} ZO accepted at ${acc}`;
+
+    case 'az':
+      return `Disputes Priority ${p} AZ accepted at ${acc}`;
+
+    case 'checkpoint':
+      return p === 1
+        ? `Disputes Priority 1 Checkpoint ${acc} Diovic`
+        : `Disputes Priority ${p} Checkpoint ${acc}`;
+
+    case 'microsoft':
+      return p === 1
+        ? `Disputes Priority 1 Microsoft ${acc}`
+        : `Disputes Priority ${p} Microsoft accepted at ${acc}`;
+
+    case 'os':
+      return `Disputes Priority ${p} OS accepted at ${acc}`;
+
+    case 'is':
+      return `Disputes Priority ${p} IS accepted at ${acc}`;
+
+    case 'tw':
+      return `Disputes Priority 1 TW accepted at ${acc}`;
+
+    case 'so':
+      return `Disputes Priority ${p} SO accepted at ${acc}`;
+
+    case 'fs':
+      return `Disputes Priority ${p} FS accepted at ${acc}`;
+
+    case 'partnerportal':
+      return `P1 dispute Partner Portal ${acc}`;
+
+    default:
+      return null;
   }
-  return null;
 }
 
 // ── WIKI: CHECKPOINT ──
