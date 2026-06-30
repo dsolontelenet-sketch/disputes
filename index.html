@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -343,8 +342,27 @@
   .wiki-message .hl-key  { color: var(--wiki-accent); }
   .wiki-message .hl-jp   { color: #c084fc; }
   .wiki-message .hl-none { color: var(--muted); }
+  .wiki-message .hl-name { color: #fb923c; }
   .wiki-message .hl-tw-num { color: var(--wiki-tw-accent); }
   .wiki-message .hl-tw-ts  { color: #a8e6a3; }
+
+  /* ── WIKI CONTROLS (editable Immutable / Security Category, per wiki box) ── */
+  .wiki-controls {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;
+    padding: 0 1.25rem 1rem;
+  }
+  .wiki-control-field label {
+    font-size: 0.62rem; margin-bottom: 0.3rem;
+  }
+  .wiki-control-field input {
+    padding: 0.5rem 0.7rem; font-size: 0.78rem;
+  }
+  .wiki-section.variant-cp .wiki-control-field input:focus { border-color: var(--wiki-accent); }
+  .wiki-section.variant-tw .wiki-control-field input:focus { border-color: var(--wiki-tw-accent); }
+
+  @media (max-width: 640px) {
+    .wiki-controls { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -454,6 +472,16 @@
           <span id="copy-label-cp">Copy</span>
         </button>
       </div>
+      <div class="wiki-controls">
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Tagged as Immutable</label>
+          <input type="number" id="cpImmutable" min="0" placeholder="0" oninput="updatePreview()" />
+        </div>
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Security Category</label>
+          <input type="text" id="cpSecurityCat" placeholder="None" oninput="updatePreview()" />
+        </div>
+      </div>
       <div class="wiki-body">
         <div class="wiki-message" id="wiki-message-cp">—</div>
       </div>
@@ -470,6 +498,16 @@
           <span id="copy-icon-tw">⎘</span>
           <span id="copy-label-tw">Copy</span>
         </button>
+      </div>
+      <div class="wiki-controls">
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Tagged as Immutable</label>
+          <input type="number" id="twImmutable" min="0" placeholder="0" oninput="updatePreview()" />
+        </div>
+        <div class="wiki-control-field field" style="margin-bottom:0;">
+          <label>Security Category</label>
+          <input type="text" id="twSecurityCat" placeholder="None" oninput="updatePreview()" />
+        </div>
       </div>
       <div class="wiki-body">
         <div class="wiki-message" id="wiki-message-tw">—</div>
@@ -598,11 +636,18 @@ function reindex() {
 }
 
 // ── HELPERS ──
+// Cleans a pasted URL down to a bare host(+path):
+//  1. Trim whitespace
+//  2. Strip a leading http:// or https:// scheme
+//  3. Strip a trailing :port (and anything after, preserving any path)
+//  4. Strip a literal leading "www." (but NOT "www2.", "www3.", etc — only
+//     the exact "www." prefix is removed)
 function cleanUrl(url) {
   return url
     .trim()
     .replace(/^https?:\/\//i, '')
     .replace(/:(\d+)(\/.*)?$/, '$2')
+    .replace(/^www\./i, '')
     .trim();
 }
 
@@ -674,6 +719,26 @@ function pad(n) {
   return String(n).padStart(2, '0');
 }
 
+// Formats the "Tagged as Immutable" field: blank/0 => "None", otherwise "01 URL" / "02 URLs"
+function formatImmutable(raw) {
+  const n = parseInt(raw, 10);
+  if (!n || n <= 0) return 'None';
+  return `${pad(n)} URL${n >= 2 ? 's' : ''}`;
+}
+
+// Formats the "Security category" field: blank => "None".
+// If a plain number is typed (e.g. "45"), it's shown as "45 URLs" (zero-padded, like Immutable).
+// Any non-numeric text is shown as-is.
+function formatSecurityCat(raw) {
+  const v = (raw || '').trim();
+  if (!v) return 'None';
+  if (/^\d+$/.test(v)) {
+    const n = parseInt(v, 10);
+    return `${pad(n)} URL${n === 1 ? '' : 's'}`;
+  }
+  return v;
+}
+
 // Extract just the date part (first 8 chars) from a timestamp like 20260506T123000
 function dateOnly(acc) {
   return acc.replace('T', '').substring(0, 8);
@@ -733,18 +798,25 @@ function getFilename() {
   }
 }
 
-// ── WIKI: CHECKPOINT ──
-function buildCPWikiText(acc, count) {
+// ── WIKI: CHECKPOINT (plain text for clipboard) ──
+function buildCPWikiText(acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」None \n「Security category」None`;
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes CP P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes priority 1 accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 Checkpoint ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
 
-function renderCPWiki(acc, count) {
+// ── WIKI: CHECKPOINT (rendered HTML) ──
+function renderCPWiki(acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  const immutableCls = immutable === 'None' ? 'hl-none' : 'hl-num';
+  const secCatCls = secCat === 'None' ? 'hl-none' : 'hl-name';
   const el = document.getElementById('wiki-message-cp');
 
   el.innerHTML =
@@ -757,24 +829,31 @@ function renderCPWiki(acc, count) {
     `Comment: Disputes Priority 1 Checkpoint <span class="hl-ts">${acc}</span>\n\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
-    `<span class="hl-jp">「Tagged as Immutable」</span><span class="hl-none">None</span> \n` +
-    `<span class="hl-jp">「Security category」</span><span class="hl-none">None</span>`;
+    `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
+    `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
 
-// ── WIKI: TW ──
-function buildTWWikiText(acc, count) {
+// ── WIKI: TW (plain text for clipboard) ──
+function buildTWWikiText(acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
   const d = dateOnly(acc);
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes TW P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes Priority 1 TW accepted at ${d}\nTotal: ${c} ${totalLabel}\nCategorized: ${fraction}\nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 TW accepted at ${d}\n\n「The same category as the secondary」None\n「The URL already has the same categories with the same order」None\n「Tagged as Immutable」None\n「Security category」None`;
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes TW P1 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes Priority 1 TW accepted at ${d}\nTotal: ${c} ${totalLabel}\nCategorized: ${fraction}\nUploaded on GD: ${fraction}\nComment: Disputes Priority 1 TW accepted at ${d}\n\n「The same category as the secondary」None\n「The URL already has the same categories with the same order」None\n「Tagged as Immutable」${immutable}\n「Security category」${secCat}`;
 }
 
-function renderTWWiki(acc, count) {
+// ── WIKI: TW (rendered HTML) ──
+function renderTWWiki(acc, count, immutableRaw, secCatRaw) {
   const c = pad(count);
   const fraction = `${c}/${c}`;
   const totalLabel = count >= 2 ? 'URLs' : 'URL';
   const d = dateOnly(acc);
+  const immutable = formatImmutable(immutableRaw);
+  const secCat = formatSecurityCat(secCatRaw);
+  const immutableCls = immutable === 'None' ? 'hl-none' : 'hl-tw-num';
+  const secCatCls = secCat === 'None' ? 'hl-none' : 'hl-name';
   const el = document.getElementById('wiki-message-tw');
 
   el.innerHTML =
@@ -787,8 +866,8 @@ function renderTWWiki(acc, count) {
     `Comment: Disputes Priority 1 TW accepted at <span class="hl-tw-ts">${d}</span>\n\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span>\n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span>\n` +
-    `<span class="hl-jp">「Tagged as Immutable」</span><span class="hl-none">None</span>\n` +
-    `<span class="hl-jp">「Security category」</span><span class="hl-none">None</span>`;
+    `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span>\n` +
+    `<span class="hl-jp">「Security category」</span><span class="${secCatCls}">${secCat}</span>`;
 }
 
 // ── PREVIEW ──
@@ -848,7 +927,7 @@ function updatePreview() {
   // Checkpoint wiki — only for Priority 1
   if (v === 'checkpoint' && selectedPriority === 1 && acc && rows.length > 0) {
     wikiSecCp.classList.add('visible');
-    renderCPWiki(acc, rows.length);
+    renderCPWiki(acc, rows.length, document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
   } else {
     wikiSecCp.classList.remove('visible');
   }
@@ -856,7 +935,7 @@ function updatePreview() {
   // TW wiki
   if (v === 'tw' && acc && rows.length > 0) {
     wikiSecTw.classList.add('visible');
-    renderTWWiki(acc, rows.length);
+    renderTWWiki(acc, rows.length, document.getElementById('twImmutable').value, document.getElementById('twSecurityCat').value);
   } else {
     wikiSecTw.classList.remove('visible');
   }
@@ -870,9 +949,9 @@ function copyWiki(vendor) {
 
   let text = '';
   if (vendor === 'cp' && v === 'checkpoint' && selectedPriority === 1 && acc && rows.length) {
-    text = buildCPWikiText(acc, rows.length);
+    text = buildCPWikiText(acc, rows.length, document.getElementById('cpImmutable').value, document.getElementById('cpSecurityCat').value);
   } else if (vendor === 'tw' && v === 'tw' && acc && rows.length) {
-    text = buildTWWikiText(acc, rows.length);
+    text = buildTWWikiText(acc, rows.length, document.getElementById('twImmutable').value, document.getElementById('twSecurityCat').value);
   } else {
     return;
   }
