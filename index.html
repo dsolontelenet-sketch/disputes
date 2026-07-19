@@ -523,7 +523,7 @@
    Defines which priority buttons are shown and
    which priority is the default for each vendor.
    Matches the team-wide Disputes File Generator:
-   ZO, AZ, OS, IS, SO, FS all support Priority 1-4.
+   ZO, AZ, OS, IS, SO all support Priority 1-4.
    ════════════════════════════════════════════ */
 const VENDOR_CONFIG = {
   barracuda:     { showPriority: false, availablePriorities: [],          defaultPriority: 1 },
@@ -972,13 +972,11 @@ function copyWiki(vendor) {
 }
 
 // ── GENERATE ──
-// Column layout: A=URL, B=Primary, C=Secondary, D=Security Category, E=Immutable flag, F=template tail
-//  - If Primary, Secondary, and Security are ALL blank → row generates exactly like the template default
-//    (col B blank, col C blank, col D = 99999, col E = "Immutable").
+// Column layout: A=URL, B=Primary, C=Secondary, D=Security Category, E=(always blank), F=template tail
 //  - Col B (Primary): if not provided, falls back to null
 //  - Col C (Secondary): only written if the user provided a value; otherwise null
-//  - Col D (Security Category): if provided, it's written AND Col E ("Immutable") is cleared (blank)
-//                                if not provided, Col D stays 99999 (template default) and Col E keeps "Immutable"
+//  - Col D (Security Category): if provided, it's written; if not provided, Col D stays 99999 (template default)
+//  - Col E (Immutable): always left blank on export, for every vendor
 //  - Rule: if Secondary or Security is filled, Primary becomes required — enforced before this runs (getInvalidRows)
 //  - Rule: Primary = 20079 requires Col D to be filled — enforced before this runs (getInvalidRows)
 function generate() {
@@ -993,13 +991,13 @@ function generate() {
   const wsData = rows.map(({ url, cat, sec, secCat }) => {
     const hasSecurityCat = secCat !== null && secCat !== undefined && secCat !== '';
     const colD = hasSecurityCat ? secCat : 99999;
-    const colE = hasSecurityCat ? '' : 'Immutable';
+    // Column E (Immutable) is intentionally left blank for all vendors on export.
     return [
       url,
       cat !== null && cat !== undefined ? cat : null,
       sec !== null && sec !== undefined ? sec : null,
       colD,
-      colE,
+      '',
       'UCReviewed,CLReviewed,CLRetain,HTTPError,IWCC,InTheClear,Uncategorized,UnknownHost,Undeliverable,Deleted,StDnsError,NRD,DLCSkip'
     ];
   });
