@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1157,6 +1156,25 @@ function dateOnly(acc) {
   return acc.replace('T', '').substring(0, 8);
 }
 
+// ── WIKI COMMENT HELPER ──
+// Returns true when the wiki "Comment:" line should include "accepted at" before the timestamp.
+// - barracuda: no (filename has no "accepted at")
+// - microsoft P1: no
+// - everything else that uses a wiki: yes
+function wikiCommentUsesAcceptedAt(vendor, priority) {
+  if (vendor === 'barracuda') return false;
+  if (vendor === 'microsoft' && priority === 1) return false;
+  return true;
+}
+
+// ── WIKI FILE LINE HELPER ──
+// Microsoft P1: "File: Disputes priority 1 Microsoft {acc}" (no "accepted")
+// Everything else: "File: Disputes priority {p} {Vendor} accepted {acc}"
+function wikiFileLineUsesAccepted(vendor, priority) {
+  if (vendor === 'microsoft' && priority === 1) return false;
+  return true;
+}
+
 // ── FILENAME ──
 function getFilename() {
   const v   = document.getElementById('vendor').value;
@@ -1175,7 +1193,8 @@ function getFilename() {
     case 'checkpoint':
       return `Disputes Priority ${p} Checkpoint ${acc} Diovic`;
     case 'microsoft':
-      return `Disputes Priority ${p} Microsoft ${acc} Diovic`;
+      if (p === 1) return `Disputes Priority 1 Microsoft ${acc} Diovic`;
+      return `Disputes Priority ${p} Microsoft accepted at ${acc} Diovic`;
     case 'os':
       return `Disputes Priority ${p} OS accepted at ${acc} Diovic`;
     case 'is':
@@ -1612,7 +1631,17 @@ function buildGenericWikiText(vendor, priority, acc, count, immutableRaw, secCat
   const vendorLabel = VENDOR_LABELS[vendor] || vendor;
   const pLabel = `P${priority}`;
   const priorityLabel = `priority ${priority}`;
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes ${abbr} ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\nFile: Disputes ${priorityLabel} ${vendorLabel} accepted ${acc} \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
+  const commentAcceptedAt = wikiCommentUsesAcceptedAt(vendor, priority);
+  const fileUsesAccepted = wikiFileLineUsesAccepted(vendor, priority);
+
+  const fileLine = fileUsesAccepted
+    ? `File: Disputes ${priorityLabel} ${vendorLabel} accepted ${acc}`
+    : `File: Disputes ${priorityLabel} ${vendorLabel} ${acc}`;
+  const commentLine = commentAcceptedAt
+    ? `Comment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}`
+    : `Comment: Disputes ${priorityLabel} ${vendorLabel} ${acc}`;
+
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes ${abbr} ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n${fileLine} \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\n${commentLine}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
 
 function renderGenericWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
@@ -1627,16 +1656,26 @@ function renderGenericWiki(vendor, priority, acc, count, immutableRaw, secCatRaw
   const vendorLabel = VENDOR_LABELS[vendor] || vendor;
   const pLabel = `P${priority}`;
   const priorityLabel = `priority ${priority}`;
+  const commentAcceptedAt = wikiCommentUsesAcceptedAt(vendor, priority);
+  const fileUsesAccepted = wikiFileLineUsesAccepted(vendor, priority);
+
+  const fileHtml = fileUsesAccepted
+    ? `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span>`
+    : `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
+  const commentHtml = commentAcceptedAt
+    ? `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>`
+    : `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
+
   const el = document.getElementById('wiki-message-gen');
 
   el.innerHTML =
     `Hi Chisato-san,\n\n` +
     `Done uploading/updating on GD the data from disputes <span class="hl-key">${abbr}</span> <span class="hl-key">${pLabel}</span> 2026 file (<span class="hl-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
-    `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span> \n` +
+    `${fileHtml} \n` +
     `Total: <span class="hl-num">${c} ${totalLabel}</span> \n` +
     `Categorized:<span class="hl-num">${fraction}</span> \n` +
     `Uploaded on GD: <span class="hl-num">${fraction}</span>\n` +
-    `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>\n\n` +
+    `${commentHtml}\n\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
@@ -1653,7 +1692,7 @@ function buildZOWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) 
   const vendorLabel = VENDOR_LABELS[vendor] || vendor;
   const pLabel = `P${priority}`;
   const priorityLabel = `priority ${priority}`;
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes ZO ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes ${priorityLabel} ${vendorLabel} accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes ZO ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
 
 function renderZOWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
@@ -1672,11 +1711,11 @@ function renderZOWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
   el.innerHTML =
     `Hi Chisato-san,\n\n` +
     `Done uploading/updating on GD the data from disputes <span class="hl-key">ZO</span> <span class="hl-key">${pLabel}</span> 2026 file (<span class="hl-zo-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
-    `[Mail] Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span> UTC \n` +
+    `[Mail] Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span> UTC \n` +
     `Total: <span class="hl-zo-num">${c} ${totalLabel}</span> \n` +
     `Categorized:<span class="hl-zo-num">${fraction}</span> \n` +
     `Uploaded on GD: <span class="hl-zo-num">${fraction}</span>\n` +
-    `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>\n\n` +
+    `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>\n\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
@@ -1693,7 +1732,7 @@ function buildAZWikiText(vendor, priority, acc, count, immutableRaw, secCatRaw) 
   const vendorLabel = VENDOR_LABELS[vendor] || vendor;
   const pLabel = `P${priority}`;
   const priorityLabel = `priority ${priority}`;
-  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes AZ ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes ${priorityLabel} ${vendorLabel} accepted ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
+  return `Hi Chisato-san,\n\nDone uploading/updating on GD the data from disputes AZ ${pLabel} 2026 file (${c} ${totalLabel}). Thank you.\n\n[Mail] Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc} UTC \nTotal: ${c} ${totalLabel} \nCategorized:${fraction} \nUploaded on GD: ${fraction}\nComment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}\n\n「The same category as the secondary」None \n「The URL already has the same categories with the same order」None \n「Tagged as Immutable」${immutable} \n「Security category」${secCat}`;
 }
 
 function renderAZWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
@@ -1712,11 +1751,11 @@ function renderAZWiki(vendor, priority, acc, count, immutableRaw, secCatRaw) {
   el.innerHTML =
     `Hi Chisato-san,\n\n` +
     `Done uploading/updating on GD the data from disputes <span class="hl-key">AZ</span> <span class="hl-key">${pLabel}</span> 2026 file (<span class="hl-az-num">${c} ${totalLabel}</span>). Thank you.\n\n` +
-    `[Mail] Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span> UTC \n` +
+    `[Mail] Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span> UTC \n` +
     `Total: <span class="hl-az-num">${c} ${totalLabel}</span> \n` +
     `Categorized:<span class="hl-az-num">${fraction}</span> \n` +
     `Uploaded on GD: <span class="hl-az-num">${fraction}</span>\n` +
-    `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>\n\n` +
+    `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>\n\n` +
     `<span class="hl-jp">「The same category as the secondary」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「The URL already has the same categories with the same order」</span><span class="hl-none">None</span> \n` +
     `<span class="hl-jp">「Tagged as Immutable」</span><span class="${immutableCls}">${immutable}</span> \n` +
