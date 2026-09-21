@@ -959,6 +959,10 @@ const VENDOR_WIKI_ABBR = {
 // Vendors that get the generic wiki message
 const GENERIC_WIKI_VENDORS = ['barracuda', 'microsoft', 'os', 'is', 'so', 'fs'];
 
+// Vendors whose generic wiki "File:" line should include "accepted at"
+// (Barracuda and Microsoft P1 remain without "at")
+const GENERIC_WIKI_ACCEPTED_AT = ['os', 'is', 'so', 'fs'];
+
 let selectedPriority = 1;
 let mode = 'single';
 
@@ -1169,10 +1173,20 @@ function wikiCommentUsesAcceptedAt(vendor, priority) {
 
 // ── WIKI FILE LINE HELPER ──
 // Microsoft P1: "File: Disputes priority 1 Microsoft {acc}" (no "accepted")
+// Barracuda: "File: Disputes priority 1 Barracuda {acc}" (no "accepted")
+// OS / IS / SO / FS / Microsoft P3: "File: Disputes priority {p} {Vendor} accepted at {acc}"
 // Everything else: "File: Disputes priority {p} {Vendor} accepted {acc}"
 function wikiFileLineUsesAccepted(vendor, priority) {
   if (vendor === 'microsoft' && priority === 1) return false;
+  if (vendor === 'barracuda') return false;
   return true;
+}
+
+// Returns true when the "File:" line should say "accepted at" (with "at")
+function wikiFileLineUsesAcceptedAt(vendor, priority) {
+  if (GENERIC_WIKI_ACCEPTED_AT.includes(vendor)) return true;
+  if (vendor === 'microsoft' && priority === 3) return true;
+  return false;
 }
 
 // ── FILENAME ──
@@ -1344,7 +1358,7 @@ function buildNSReport() {
   const lines = [];
   lines.push('Hi All,');
   lines.push('');
-  lines.push(`We received a ${vendorLabel} Disputes Priority ${p} accepted ${acc} UTC`);
+  lines.push(`We received a ${vendorLabel} Disputes Priority ${p} accepted at ${acc} UTC`);
   lines.push('');
   if (secUrl) lines.push(secUrl);
   lines.push('');
@@ -1422,7 +1436,7 @@ function buildNSReport() {
   }
 
   lines.push('');
-  lines.push(`Comment: Disputes priority ${p} accepted ${acc}`);
+  lines.push(`Comment: Disputes priority ${p} ${vendorLabel} accepted at ${acc}`);
   lines.push('');
   lines.push('-This site is a malware based on NetSTAR SHIELD.');
 
@@ -1446,7 +1460,7 @@ function renderNSReport() {
   const lines = [];
   lines.push('Hi All,');
   lines.push('');
-  lines.push(`We received a <span class="hl-ns-key">${vendorLabel}</span> Disputes Priority ${p} accepted <span class="hl-ns-ts">${acc}</span> UTC`);
+  lines.push(`We received a <span class="hl-ns-key">${vendorLabel}</span> Disputes Priority ${p} accepted at <span class="hl-ns-ts">${acc}</span> UTC`);
   lines.push('');
   if (secUrl) lines.push(`<span class="hl-ns-url">${secUrl}</span>`);
   lines.push('');
@@ -1524,7 +1538,7 @@ function renderNSReport() {
   }
 
   lines.push('');
-  lines.push(`Comment: Disputes priority ${p} accepted <span class="hl-ns-ts">${acc}</span>`);
+  lines.push(`Comment: Disputes priority ${p} <span class="hl-ns-key">${vendorLabel}</span> accepted at <span class="hl-ns-ts">${acc}</span>`);
   lines.push('');
   lines.push('-This site is a malware based on NetSTAR SHIELD.');
 
@@ -1633,9 +1647,12 @@ function buildGenericWikiText(vendor, priority, acc, count, immutableRaw, secCat
   const priorityLabel = `priority ${priority}`;
   const commentAcceptedAt = wikiCommentUsesAcceptedAt(vendor, priority);
   const fileUsesAccepted = wikiFileLineUsesAccepted(vendor, priority);
+  const fileUsesAcceptedAt = wikiFileLineUsesAcceptedAt(vendor, priority);
 
   const fileLine = fileUsesAccepted
-    ? `File: Disputes ${priorityLabel} ${vendorLabel} accepted ${acc}`
+    ? (fileUsesAcceptedAt
+        ? `File: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}`
+        : `File: Disputes ${priorityLabel} ${vendorLabel} accepted ${acc}`)
     : `File: Disputes ${priorityLabel} ${vendorLabel} ${acc}`;
   const commentLine = commentAcceptedAt
     ? `Comment: Disputes ${priorityLabel} ${vendorLabel} accepted at ${acc}`
@@ -1658,10 +1675,17 @@ function renderGenericWiki(vendor, priority, acc, count, immutableRaw, secCatRaw
   const priorityLabel = `priority ${priority}`;
   const commentAcceptedAt = wikiCommentUsesAcceptedAt(vendor, priority);
   const fileUsesAccepted = wikiFileLineUsesAccepted(vendor, priority);
+  const fileUsesAcceptedAt = wikiFileLineUsesAcceptedAt(vendor, priority);
 
-  const fileHtml = fileUsesAccepted
-    ? `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span>`
-    : `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
+  let fileHtml;
+  if (!fileUsesAccepted) {
+    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
+  } else if (fileUsesAcceptedAt) {
+    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>`;
+  } else {
+    fileHtml = `File: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted <span class="hl-ts">${acc}</span>`;
+  }
+
   const commentHtml = commentAcceptedAt
     ? `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> accepted at <span class="hl-ts">${acc}</span>`
     : `Comment: Disputes ${priorityLabel} <span class="hl-key">${vendorLabel}</span> <span class="hl-ts">${acc}</span>`;
